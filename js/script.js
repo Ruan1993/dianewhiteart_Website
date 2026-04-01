@@ -11,9 +11,18 @@ function initMenu() {
   const toggle = document.querySelector('[data-menu-toggle]');
   const links = document.querySelector('.nav-links');
   if (!toggle || !links) return;
-  toggle.addEventListener('click', () => document.body.classList.toggle('menu-open'));
-  links.querySelectorAll('a').forEach(link => link.addEventListener('click', () => document.body.classList.remove('menu-open')));
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.body.classList.remove('menu-open'); });
+
+  toggle.addEventListener('click', () => {
+    document.body.classList.toggle('menu-open');
+  });
+
+  links.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => document.body.classList.remove('menu-open'));
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') document.body.classList.remove('menu-open');
+  });
 }
 
 function initHeroSlider() {
@@ -21,21 +30,26 @@ function initHeroSlider() {
   const dots = Array.from(document.querySelectorAll('.hero-dots button'));
   if (!slides.length) return;
   let index = 0;
+
   const activate = (i) => {
     slides.forEach((slide, idx) => slide.classList.toggle('active', idx === i));
     dots.forEach((dot, idx) => dot.classList.toggle('active', idx === i));
     index = i;
   };
+
   dots.forEach((dot, i) => dot.addEventListener('click', () => activate(i)));
   activate(0);
-  setInterval(() => activate((index + 1) % slides.length), 5200);
+  setInterval(() => activate((index + 1) % slides.length), 7000);
 }
 
 function getSoldState() {
   try { return JSON.parse(localStorage.getItem(soldKey) || '{}'); }
   catch { return {}; }
 }
-function saveSoldState(state) { localStorage.setItem(soldKey, JSON.stringify(state)); }
+
+function saveSoldState(state) {
+  localStorage.setItem(soldKey, JSON.stringify(state));
+}
 
 function applySoldState() {
   const state = getSoldState();
@@ -73,6 +87,7 @@ function initFilters() {
   const filterButtons = Array.from(document.querySelectorAll('[data-filter]'));
   const cards = Array.from(document.querySelectorAll('[data-category]'));
   if (!filterButtons.length || !cards.length) return;
+
   filterButtons.forEach(button => {
     button.addEventListener('click', () => {
       const filter = button.dataset.filter;
@@ -85,21 +100,12 @@ function initFilters() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  setActiveNav();
-  initMenu();
-  initHeroSlider();
-  initSoldToggles();
-  initFilters();
-  initLightbox();
-  initBackToTop();
-  initDynamicYear();
-});
-
-
 function initLightbox() {
   const triggerImages = document.querySelectorAll('.art-image img');
   if (!triggerImages.length) return;
+
+  const existing = document.querySelector('.lightbox');
+  if (existing) existing.remove();
 
   const lightbox = document.createElement('div');
   lightbox.className = 'lightbox';
@@ -107,46 +113,26 @@ function initLightbox() {
     <div class="lightbox-inner">
       <button class="lightbox-close" type="button" aria-label="Close image viewer">×</button>
       <img src="" alt="" />
-      <div class="lightbox-caption" hidden>
-        <h3></h3>
-        <p></p>
-      </div>
     </div>
   `;
   document.body.appendChild(lightbox);
 
   const lightboxImg = lightbox.querySelector('img');
   const closeBtn = lightbox.querySelector('.lightbox-close');
-  const caption = lightbox.querySelector('.lightbox-caption');
-  const captionTitle = caption.querySelector('h3');
-  const captionText = caption.querySelector('p');
+
+  function closeLightbox() {
+    lightbox.classList.remove('open');
+    lightboxImg.src = '';
+  }
 
   triggerImages.forEach(img => {
     img.classList.add('clickable-image');
     img.addEventListener('click', () => {
       lightboxImg.src = img.src;
       lightboxImg.alt = img.alt || 'Artwork image';
-      const card = img.closest('.art-card');
-      const title = card?.querySelector('h3')?.textContent?.trim() || '';
-      const metaLines = Array.from(card?.querySelectorAll('.meta div') || []).map(el => el.textContent.trim());
-      if (title || metaLines.length) {
-        caption.hidden = false;
-        captionTitle.textContent = title;
-        captionText.textContent = metaLines.join(' · ');
-      } else {
-        caption.hidden = true;
-        captionTitle.textContent = '';
-        captionText.textContent = '';
-      }
       lightbox.classList.add('open');
-      document.body.classList.add('menu-open');
     });
   });
-
-  function closeLightbox() {
-    lightbox.classList.remove('open');
-    document.body.classList.remove('menu-open');
-  }
 
   closeBtn.addEventListener('click', closeLightbox);
   lightbox.addEventListener('click', (e) => {
@@ -159,6 +145,9 @@ function initLightbox() {
 }
 
 function initBackToTop() {
+  const existing = document.querySelector('.back-to-top');
+  if (existing) existing.remove();
+
   const button = document.createElement('button');
   button.className = 'back-to-top';
   button.type = 'button';
@@ -167,10 +156,15 @@ function initBackToTop() {
   document.body.appendChild(button);
 
   const toggleVisibility = () => {
+    if (window.innerWidth <= 760) {
+      button.classList.add('show');
+      return;
+    }
     button.classList.toggle('show', window.scrollY > 280);
   };
 
   window.addEventListener('scroll', toggleVisibility, { passive: true });
+  window.addEventListener('resize', toggleVisibility);
   toggleVisibility();
 
   button.addEventListener('click', () => {
@@ -183,3 +177,29 @@ function initDynamicYear() {
     el.textContent = new Date().getFullYear();
   });
 }
+
+function initContactPrefill() {
+  const form = document.querySelector('.pretty-form');
+  if (!form) return;
+  const params = new URLSearchParams(window.location.search);
+  const artwork = params.get('artwork');
+  const messageBox = form.querySelector('textarea');
+  const subjectSelect = form.querySelector('select');
+  if (artwork && messageBox) {
+    const decoded = decodeURIComponent(artwork);
+    messageBox.value = `Hello, I would like to enquire about this artwork:\n\n${decoded}`;
+    if (subjectSelect) subjectSelect.value = 'Interested in original artwork';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  setActiveNav();
+  initMenu();
+  initHeroSlider();
+  initSoldToggles();
+  initFilters();
+  initLightbox();
+  initBackToTop();
+  initDynamicYear();
+  initContactPrefill();
+});
