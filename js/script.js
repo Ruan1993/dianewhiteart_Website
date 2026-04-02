@@ -11,9 +11,18 @@ function initMenu() {
   const toggle = document.querySelector('[data-menu-toggle]');
   const links = document.querySelector('.nav-links');
   if (!toggle || !links) return;
-  toggle.addEventListener('click', () => document.body.classList.toggle('menu-open'));
-  links.querySelectorAll('a').forEach(link => link.addEventListener('click', () => document.body.classList.remove('menu-open')));
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.body.classList.remove('menu-open'); });
+
+  toggle.addEventListener('click', () => {
+    document.body.classList.toggle('menu-open');
+  });
+
+  links.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => document.body.classList.remove('menu-open'));
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') document.body.classList.remove('menu-open');
+  });
 }
 
 function initHeroSlider() {
@@ -21,21 +30,26 @@ function initHeroSlider() {
   const dots = Array.from(document.querySelectorAll('.hero-dots button'));
   if (!slides.length) return;
   let index = 0;
+
   const activate = (i) => {
     slides.forEach((slide, idx) => slide.classList.toggle('active', idx === i));
     dots.forEach((dot, idx) => dot.classList.toggle('active', idx === i));
     index = i;
   };
+
   dots.forEach((dot, i) => dot.addEventListener('click', () => activate(i)));
   activate(0);
-  setInterval(() => activate((index + 1) % slides.length), 5200);
+  setInterval(() => activate((index + 1) % slides.length), 7000);
 }
 
 function getSoldState() {
   try { return JSON.parse(localStorage.getItem(soldKey) || '{}'); }
   catch { return {}; }
 }
-function saveSoldState(state) { localStorage.setItem(soldKey, JSON.stringify(state)); }
+
+function saveSoldState(state) {
+  localStorage.setItem(soldKey, JSON.stringify(state));
+}
 
 function applySoldState() {
   const state = getSoldState();
@@ -73,6 +87,7 @@ function initFilters() {
   const filterButtons = Array.from(document.querySelectorAll('[data-filter]'));
   const cards = Array.from(document.querySelectorAll('[data-category]'));
   if (!filterButtons.length || !cards.length) return;
+
   filterButtons.forEach(button => {
     button.addEventListener('click', () => {
       const filter = button.dataset.filter;
@@ -85,72 +100,83 @@ function initFilters() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  setActiveNav();
-  initMenu();
-  initHeroSlider();
-  initSoldToggles();
-  initFilters();
-  initLightbox();
-  initBackToTop();
-  initDynamicYear();
-});
-
 
 function initLightbox() {
   const triggerImages = document.querySelectorAll('.art-image img');
   if (!triggerImages.length) return;
 
+  const existing = document.querySelector('.lightbox');
+  if (existing) existing.remove();
+
   const lightbox = document.createElement('div');
   lightbox.className = 'lightbox';
   lightbox.innerHTML = `
-    <div class="lightbox-inner">
+    <div class="lightbox-inner hi-res-ready">
       <button class="lightbox-close" type="button" aria-label="Close image viewer">×</button>
       <img src="" alt="" />
-      <div class="lightbox-caption" hidden>
-        <h3></h3>
-        <p></p>
-      </div>
     </div>
   `;
   document.body.appendChild(lightbox);
 
   const lightboxImg = lightbox.querySelector('img');
   const closeBtn = lightbox.querySelector('.lightbox-close');
-  const caption = lightbox.querySelector('.lightbox-caption');
-  const captionTitle = caption.querySelector('h3');
-  const captionText = caption.querySelector('p');
+
+  function fitImageToViewport() {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const nw = lightboxImg.naturalWidth || 0;
+    const nh = lightboxImg.naturalHeight || 0;
+    if (!nw || !nh) return;
+
+    const padding = window.innerWidth <= 760 ? 24 : 48;
+    const maxW = vw - padding;
+    const maxH = vh - padding;
+    const scale = Math.min(maxW / nw, maxH / nh, 1); // never upscale beyond native resolution
+    const finalW = Math.floor(nw * scale);
+    const finalH = Math.floor(nh * scale);
+
+    lightboxImg.style.width = finalW + 'px';
+    lightboxImg.style.height = finalH + 'px';
+  }
+
+  function closeLightbox() {
+    lightbox.classList.remove('open');
+    lightbox.classList.remove('loading');
+    lightboxImg.removeAttribute('src');
+    lightboxImg.style.width = '';
+    lightboxImg.style.height = '';
+  }
 
   triggerImages.forEach(img => {
     img.classList.add('clickable-image');
     img.addEventListener('click', () => {
-      lightboxImg.src = img.src;
-      lightboxImg.alt = img.alt || 'Artwork image';
-      const card = img.closest('.art-card');
-      const title = card?.querySelector('h3')?.textContent?.trim() || '';
-      const metaLines = Array.from(card?.querySelectorAll('.meta div') || []).map(el => el.textContent.trim());
-      if (title || metaLines.length) {
-        caption.hidden = false;
-        captionTitle.textContent = title;
-        captionText.textContent = metaLines.join(' · ');
-      } else {
-        caption.hidden = true;
-        captionTitle.textContent = '';
-        captionText.textContent = '';
-      }
+      const hiRes = img.dataset.full || img.getAttribute('data-full') || img.currentSrc || img.src;
       lightbox.classList.add('open');
-      document.body.classList.add('menu-open');
+      lightbox.classList.add('loading');
+      lightboxImg.alt = img.alt || 'Artwork image';
+
+      const preload = new Image();
+      preload.onload = () => {
+        lightboxImg.src = hiRes;
+        fitImageToViewport();
+        lightbox.classList.remove('loading');
+      };
+      preload.onerror = () => {
+        lightboxImg.src = img.currentSrc || img.src;
+        fitImageToViewport();
+        lightbox.classList.remove('loading');
+      };
+      preload.src = hiRes;
     });
   });
-
-  function closeLightbox() {
-    lightbox.classList.remove('open');
-    document.body.classList.remove('menu-open');
-  }
 
   closeBtn.addEventListener('click', closeLightbox);
   lightbox.addEventListener('click', (e) => {
     if (e.target === lightbox) closeLightbox();
+  });
+
+  window.addEventListener('resize', () => {
+    if (lightbox.classList.contains('open') && lightboxImg.src) fitImageToViewport();
   });
 
   document.addEventListener('keydown', (e) => {
@@ -158,7 +184,11 @@ function initLightbox() {
   });
 }
 
+
 function initBackToTop() {
+  const existing = document.querySelector('.back-to-top');
+  if (existing) existing.remove();
+
   const button = document.createElement('button');
   button.className = 'back-to-top';
   button.type = 'button';
@@ -167,10 +197,15 @@ function initBackToTop() {
   document.body.appendChild(button);
 
   const toggleVisibility = () => {
+    if (window.innerWidth <= 760) {
+      button.classList.add('show');
+      return;
+    }
     button.classList.toggle('show', window.scrollY > 280);
   };
 
   window.addEventListener('scroll', toggleVisibility, { passive: true });
+  window.addEventListener('resize', toggleVisibility);
   toggleVisibility();
 
   button.addEventListener('click', () => {
@@ -183,3 +218,119 @@ function initDynamicYear() {
     el.textContent = new Date().getFullYear();
   });
 }
+
+function initContactPrefill() {
+  const form = document.querySelector('.pretty-form');
+  if (!form) return;
+  const params = new URLSearchParams(window.location.search);
+  const artwork = params.get('artwork');
+  const messageBox = form.querySelector('textarea');
+  const subjectSelect = form.querySelector('select');
+  if (artwork && messageBox) {
+    const decoded = decodeURIComponent(artwork);
+    const generalTopics = ['Shipping Enquiry','Commission Enquiry','Privacy Policy Enquiry','Terms and Conditions Enquiry','Testimonial Enquiry'];
+    const isGeneral = generalTopics.includes(decoded);
+    messageBox.value = isGeneral
+      ? `Hello, I would like to enquire about: ${decoded}.`
+      : `Hello, I would like to enquire about this artwork:\n\n${decoded}`;
+    if (subjectSelect) {
+      if (decoded === 'Commission Enquiry') subjectSelect.value = 'Commission enquiry';
+      else if (decoded === 'Shipping Enquiry') subjectSelect.value = 'General enquiry';
+      else if (!isGeneral) subjectSelect.value = 'Interested in original artwork';
+      else subjectSelect.value = 'General enquiry';
+    }
+  }
+}
+
+
+function initFormspreeForms() {
+  const forms = document.querySelectorAll('.formspree-form');
+  if (!forms.length) return;
+
+  forms.forEach(form => {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const submitBtn = form.querySelector('button[type="submit"]');
+      const successBox = form.querySelector('.form-success-message');
+      let errorBox = form.querySelector('.form-error-message');
+
+      if (successBox) successBox.hidden = true;
+      if (!errorBox) {
+        errorBox = document.createElement('div');
+        errorBox.className = 'form-error-message';
+        errorBox.hidden = true;
+        form.appendChild(errorBox);
+      }
+      errorBox.hidden = true;
+      errorBox.textContent = '';
+
+      const formData = new FormData(form);
+      const formType = form.dataset.formType || '';
+
+      if (formType === 'newsletter') {
+        const name = (formData.get('name') || '').toString().trim();
+        const email = (formData.get('email') || '').toString().trim();
+        formData.set('_subject', `Newsletter signup: ${name || 'New subscriber'} | Diane White Art`);
+        formData.set('message', `A new newsletter subscription was submitted from the Diane White Art website.\n\nName: ${name}\nEmail: ${email}\nSource: Homepage Newsletter`);
+      }
+
+      if (formType === 'contact') {
+        const name = (formData.get('name') || '').toString().trim();
+        const email = (formData.get('email') || '').toString().trim();
+        const phone = (formData.get('phone') || '').toString().trim();
+        const subject = (formData.get('subject') || 'General enquiry').toString().trim();
+        const message = (formData.get('message') || '').toString().trim();
+
+        formData.set('_subject', `${subject} | Diane White Art | ${name || 'Website enquiry'}`);
+        formData.set('message', `A new website enquiry was submitted through the Diane White Art contact form.\n\nName: ${name}\nEmail: ${email}\nPhone: ${phone || 'Not provided'}\nSubject: ${subject}\n\nMessage:\n${message}`);
+      }
+
+      Array.from(form.elements).forEach(el => el.disabled = true);
+      if (submitBtn) {
+        submitBtn.dataset.originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Sending...';
+      }
+
+      try {
+        const response = await fetch(form.action, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Form submission failed');
+        }
+
+        form.reset();
+        if (successBox) successBox.hidden = false;
+        form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } catch (error) {
+        errorBox.textContent = 'Sorry, something went wrong while sending your form. Please try again.';
+        errorBox.hidden = false;
+      } finally {
+        Array.from(form.elements).forEach(el => el.disabled = false);
+        if (submitBtn) {
+          submitBtn.textContent = submitBtn.dataset.originalText || 'Submit';
+        }
+      }
+    });
+  });
+}
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  setActiveNav();
+  initMenu();
+  initHeroSlider();
+  initSoldToggles();
+  initFilters();
+  initLightbox();
+  initBackToTop();
+  initDynamicYear();
+  initContactPrefill();
+  initFormspreeForms();
+});
