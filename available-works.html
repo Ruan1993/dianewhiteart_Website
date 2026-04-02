@@ -57,6 +57,12 @@
           <a data-nav="blog" href="blog.html">Blog</a>
           <a data-nav="about" href="about.html">About</a>
           <a data-nav="contact" class="nav-cta" href="contact.html">Contact</a>
+          <a
+            href="#admin-panel"
+            class="mobile-only admin-shortcut"
+            data-admin-jump
+            >Admin Login</a
+          >
         </nav>
       </div>
     </header>
@@ -90,10 +96,10 @@
                   All Works
                 </button>
                 <button class="chip" type="button" data-filter-main="acrylic">
-                  Acrylics
+                  Acrylics & Oil Paintings
                 </button>
                 <button class="chip" type="button" data-filter-main="inks">
-                  Inks
+                  Flow Art
                 </button>
                 <button
                   class="chip"
@@ -124,6 +130,12 @@
               </div>
             </div>
             <div class="toolbar-right available-summary">
+              <div class="sold-toggle-wrap">
+                <label class="toggle-label">
+                  <input type="checkbox" data-toggle-sold-visibility checked />
+                  <span>Show Sold Works</span>
+                </label>
+              </div>
               <span class="muted-small" data-gallery-count>Loading works…</span>
             </div>
           </div>
@@ -134,9 +146,14 @@
 
           <div class="gallery-grid" data-gallery-grid></div>
 
-          <div class="admin-panel" data-admin-panel hidden>
+          <div class="admin-panel" id="admin-panel" data-admin-panel hidden>
             <div class="admin-panel-copy">
-              <strong>Admin controls</strong>
+              <div class="admin-header-row">
+                <strong>Admin controls</strong>
+                <span class="admin-active-badge" data-admin-active-badge hidden
+                  >Admin Active</span
+                >
+              </div>
               <p class="muted-small" data-admin-status>
                 Sign in here to manage Sold / Available status on this page.
               </p>
@@ -329,5 +346,18 @@
     <script src="js/firebase-config.js"></script>
     <script src="data/available-works.js"></script>
     <script src="js/script.js"></script>
+    <script>
+      // Smooth scroll for admin jump link
+      document
+        .querySelector("[data-admin-jump]")
+        ?.addEventListener("click", (e) => {
+          const panel = document.getElementById("admin-panel");
+          if (panel) {
+            e.preventDefault();
+            panel.hidden = false;
+            panel.scrollIntoView({ behavior: "smooth" });
+          }
+        });
+    </script>
   </body>
 </html>

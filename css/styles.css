@@ -410,6 +410,68 @@ main section {
   opacity: 0.45;
   cursor: not-allowed;
 }
+.admin-header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.admin-active-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 10px;
+  background: #10b981;
+  color: #fff;
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+}
+
+.sold-toggle-wrap {
+  margin-right: auto;
+}
+.toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+.toggle-label input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.admin-shortcut {
+  color: var(--accent) !important;
+  font-weight: 700 !important;
+  border-top: 1px solid rgba(122, 31, 43, 0.1);
+  margin-top: 10px !important;
+  padding-top: 15px !important;
+}
+
+.admin-log {
+  font-size: 0.78rem;
+  color: var(--muted);
+  opacity: 0.8;
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.mobile-only { display: none; }
+@media (max-width: 760px) {
+  .mobile-only { display: block; }
+  .available-summary {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 12px;
+  }
+  .sold-toggle-wrap { margin-right: 0; }
+}
+
 @media (max-width: 760px) {
   .admin-form, .admin-session {
     flex-direction: column;

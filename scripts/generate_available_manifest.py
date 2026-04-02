@@ -39,8 +39,8 @@ def slugify(value: str) -> str:
 
 def humanize_folder(name: str) -> str:
     mapping = {
-        'acrylics': 'Acrylics',
-        'inks': 'Inks',
+        'acrylics & oil paintings': 'Acrylics & Oil Paintings',
+        'flow art': 'Flow Art',
         'watercolours': 'Watercolours',
         'landscape': 'Landscapes',
         'florals': 'Florals',
@@ -74,6 +74,12 @@ def extract_price(text: str) -> str:
 
 def extract_medium_details(text: str, medium_label: str) -> str:
     medium_root = medium_label.rstrip('s')
+    # Special cases for new names
+    if 'Acrylics & Oil Paintings' in medium_label:
+        medium_root = 'Acrylic' # Default root for these
+    elif 'Flow Art' in medium_label:
+        medium_root = 'Flow Art'
+
     normalized = text.replace('l000', '1000').replace('x750', 'x 750')
     pattern = re.compile(rf'({medium_root}\b.*)', re.IGNORECASE)
     match = pattern.search(normalized)
@@ -115,6 +121,12 @@ def build_item(path: Path) -> dict[str, str]:
     rel = path.relative_to(ROOT).as_posix()
     medium_folder = path.parents[1].name
     subcategory_folder = path.parent.name
+    
+    # Handle files directly in a medium folder (like Flow Art/Small bowl...)
+    if len(path.relative_to(AVAILABLE_DIR).parts) == 2:
+        medium_folder = path.parent.name
+        subcategory_folder = 'General'
+
     medium_label = humanize_folder(medium_folder)
     subcategory_label = humanize_folder(subcategory_folder)
     prefix_label, number, title = extract_title(path.name)
@@ -134,7 +146,7 @@ def build_item(path: Path) -> dict[str, str]:
         'size': extract_size(raw_text),
         'price': extract_price(raw_text),
         'status': 'Available',
-        'mainFilter': {'Acrylics': 'acrylic', 'Inks': 'inks', 'Watercolours': 'watercolour'}.get(medium_label, slugify(medium_label.rstrip('s'))),
+        'mainFilter': {'Acrylics & Oil Paintings': 'acrylic', 'Flow Art': 'inks', 'Watercolours': 'watercolour'}.get(medium_label, slugify(medium_label.rstrip('s'))),
         'subFilter': {'Landscapes': 'landscapes', 'Florals': 'florals', 'Animals': 'animals'}.get(subcategory_label, slugify(subcategory_label)),
     }
 
@@ -155,7 +167,7 @@ def main() -> None:
         if not medium_dir.is_dir():
             continue
         medium_label = humanize_folder(medium_dir.name)
-        main_key = {'Acrylics': 'acrylic', 'Inks': 'inks', 'Watercolours': 'watercolour'}.get(medium_label, slugify(medium_label.rstrip('s')) )
+        main_key = {'Acrylics & Oil Paintings': 'acrylic', 'Flow Art': 'inks', 'Watercolours': 'watercolour'}.get(medium_label, slugify(medium_label.rstrip('s')) )
         available_main_filters.add(main_key)
 
         for sub_dir in medium_dir.iterdir():
@@ -165,15 +177,19 @@ def main() -> None:
             sub_key = {'Landscapes': 'landscapes', 'Florals': 'florals', 'Animals': 'animals'}.get(sub_label, slugify(sub_label))
             available_sub_filters.add(sub_key)
 
-    for path in sorted(AVAILABLE_DIR.rglob('*'), key=sort_key):
-        if path.is_file() and path.suffix.lower() in IMAGE_EXTS and len(path.relative_to(AVAILABLE_DIR).parts) >= 3:
-            works.append(build_item(path))
+    for path in AVAILABLE_DIR.rglob('*'):
+        if path.is_file() and path.suffix.lower() in IMAGE_EXTS:
+            rel_parts = path.relative_to(AVAILABLE_DIR).parts
+            if len(rel_parts) >= 2: # At least Medium/File or Medium/Sub/File
+                works.append(build_item(path))
+    
+    works.sort(key=lambda p: sort_key(AVAILABLE_DIR / p['image']))
 
     filters = {
         'main': [
             {'key': 'all', 'label': 'All Works'},
-            {'key': 'acrylic', 'label': 'Acrylics'},
-            {'key': 'inks', 'label': 'Inks'},
+            {'key': 'acrylic', 'label': 'Acrylics & Oil Paintings'},
+            {'key': 'inks', 'label': 'Flow Art'},
             {'key': 'watercolour', 'label': 'Watercolours'},
         ],
         'sub': [

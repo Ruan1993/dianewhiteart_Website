@@ -6,6 +6,7 @@ const firebaseState = {
   db: null,
   user: null,
   isAdmin: false,
+  showSold: true,
   statuses: {},
   unsubscribeStatuses: null,
   authObserverAttached: false,
@@ -75,16 +76,28 @@ function formatStatusLabel(value) {
 
 function getLiveStatusForWork(work) {
   const key = normalizeInventoryLabel(work?.inventoryLabel || work?.number || work?.id);
-  if (key && firebaseState.statuses[key]) {
-    return formatStatusLabel(firebaseState.statuses[key]);
+  const liveData = firebaseState.statuses[key];
+  if (key && liveData) {
+    return {
+      status: formatStatusLabel(liveData.status),
+      updatedBy: liveData.updatedBy,
+      updatedAt: liveData.updatedAt
+    };
   }
-  return formatStatusLabel(work?.status || 'Available');
+  return {
+    status: formatStatusLabel(work?.status || 'Available'),
+    updatedBy: null,
+    updatedAt: null
+  };
 }
 
 function mergeWorkWithLiveStatus(work) {
+  const live = getLiveStatusForWork(work);
   return {
     ...work,
-    status: getLiveStatusForWork(work),
+    status: live.status,
+    updatedBy: live.updatedBy,
+    updatedAt: live.updatedAt
   };
 }
 
@@ -120,12 +133,14 @@ function updateAdminPanelUI(message = '') {
   const signedIn = panel.querySelector('[data-admin-signed-in]');
   const emailLabel = panel.querySelector('[data-admin-user-email]');
   const formButton = panel.querySelector('[data-admin-submit]');
+  const activeBadge = panel.querySelector('[data-admin-active-badge]');
 
   if (!firebaseState.enabled) {
     panel.hidden = false;
     if (status) status.textContent = 'Firebase is not configured on this page yet.';
     if (signedOut) signedOut.hidden = true;
     if (signedIn) signedIn.hidden = true;
+    if (activeBadge) activeBadge.hidden = true;
     return;
   }
 
@@ -135,11 +150,13 @@ function updateAdminPanelUI(message = '') {
     if (signedOut) signedOut.hidden = false;
     if (signedIn) signedIn.hidden = true;
     if (formButton) formButton.disabled = false;
+    if (activeBadge) activeBadge.hidden = true;
     return;
   }
 
   if (signedOut) signedOut.hidden = true;
   if (signedIn) signedIn.hidden = false;
+  if (activeBadge) activeBadge.hidden = !firebaseState.isAdmin;
   if (emailLabel) emailLabel.textContent = firebaseState.user.email || 'Admin';
   if (status) {
     status.textContent = message || (
@@ -159,7 +176,11 @@ function subscribeToArtworkStatuses() {
       const data = doc.data() || {};
       const key = normalizeInventoryLabel(data.inventoryLabel || doc.id);
       if (!key) return;
-      nextStatuses[key] = normalizeStatus(data.status);
+      nextStatuses[key] = {
+        status: normalizeStatus(data.status),
+        updatedBy: data.updatedBy || null,
+        updatedAt: data.updatedAt || null
+      };
     });
     firebaseState.statuses = nextStatuses;
     if (typeof firebaseState.renderGallery === 'function') {
@@ -273,7 +294,11 @@ async function saveArtworkStatus(inventoryLabel, nextStatus) {
 
   firebaseState.statuses = {
     ...firebaseState.statuses,
-    [normalizedLabel]: normalizedStatus,
+    [normalizedLabel]: {
+      status: normalizedStatus,
+      updatedBy: firebaseState.user?.email || 'admin',
+      updatedAt: window.firebase.firestore.Timestamp.now()
+    },
   };
 
   if (typeof firebaseState.renderGallery === 'function') {
@@ -334,6 +359,13 @@ function createArtworkCard(work) {
   const nextStatus = isSold ? 'available' : 'sold';
   const inventoryLabel = work.inventoryLabel || work.number || work.id || 'Artwork';
 
+  let adminLog = '';
+  if (firebaseState.isAdmin && work.updatedBy) {
+    const date = work.updatedAt?.toDate ? work.updatedAt.toDate() : (work.updatedAt ? new Date(work.updatedAt) : null);
+    const dateStr = date ? date.toLocaleDateString() : '';
+    adminLog = `<div class="admin-log">Last updated by ${work.updatedBy} ${dateStr}</div>`;
+  }
+
   return `
     <article class="art-card ${isSold ? 'is-sold' : ''}" data-art-id="${escapeHtml(work.id)}" data-inventory-label="${escapeHtml(inventoryLabel)}" data-category="${escapeHtml(work.mainFilter)}" data-subcategory="${escapeHtml(work.subFilter || '')}">
       <div class="art-image">
@@ -355,6 +387,7 @@ function createArtworkCard(work) {
           <div>Size: ${escapeHtml(sizeLine)}</div>
           <div>Price: ${escapeHtml(priceLine)}</div>
           <div data-status-text>Status: ${escapeHtml(currentStatus)}</div>
+          ${adminLog}
         </div>
         <div class="card-actions">
           ${!isSold ? `<a class="small-btn accent" href="contact.html?artwork=${enquiryTitle}">Enquire</a>` : ''}
@@ -430,9 +463,23 @@ async function initAvailableWorksPage() {
 
   updateFilterAvailability(payload, works, mainButtons, subButtons);
 
+  const soldToggle = document.querySelector('[data-toggle-sold-visibility]');
+  if (soldToggle) {
+    soldToggle.checked = firebaseState.showSold;
+    soldToggle.addEventListener('change', (e) => {
+      firebaseState.showSold = e.target.checked;
+      renderGallery();
+    });
+  }
+
   const getVisibleWorks = () => {
     const liveWorks = works.map(mergeWorkWithLiveStatus);
     let filtered = liveWorks;
+
+    if (!firebaseState.showSold) {
+      filtered = filtered.filter(work => normalizeStatus(work.status) !== 'sold');
+    }
+
     if (activeMain !== 'all') {
       filtered = filtered.filter((work) => work.mainFilter === activeMain);
     }
