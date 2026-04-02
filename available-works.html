@@ -78,17 +78,49 @@
         <div class="container">
           <div class="toolbar available-toolbar" data-available-toolbar>
             <div class="filters-wrap">
-              <div class="filters main-filters" aria-label="Artwork medium filters">
-                <button class="chip active" type="button" data-filter-main="all">All Works</button>
-                <button class="chip" type="button" data-filter-main="acrylic">Acrylics</button>
-                <button class="chip" type="button" data-filter-main="inks">Inks</button>
-                <button class="chip" type="button" data-filter-main="watercolour">Watercolours</button>
+              <div
+                class="filters main-filters"
+                aria-label="Artwork medium filters"
+              >
+                <button
+                  class="chip active"
+                  type="button"
+                  data-filter-main="all"
+                >
+                  All Works
+                </button>
+                <button class="chip" type="button" data-filter-main="acrylic">
+                  Acrylics
+                </button>
+                <button class="chip" type="button" data-filter-main="inks">
+                  Inks
+                </button>
+                <button
+                  class="chip"
+                  type="button"
+                  data-filter-main="watercolour"
+                >
+                  Watercolours
+                </button>
               </div>
-              <div class="filters sub-filters" id="acrylic-sub-filters" aria-label="Acrylic categories" hidden>
-                <button class="chip active" type="button" data-filter-sub="all">All Acrylics</button>
-                <button class="chip" type="button" data-filter-sub="landscapes">Landscapes</button>
-                <button class="chip" type="button" data-filter-sub="florals">Florals</button>
-                <button class="chip" type="button" data-filter-sub="animals">Animals</button>
+              <div
+                class="filters sub-filters"
+                id="acrylic-sub-filters"
+                aria-label="Acrylic categories"
+                hidden
+              >
+                <button class="chip active" type="button" data-filter-sub="all">
+                  All Acrylics
+                </button>
+                <button class="chip" type="button" data-filter-sub="landscapes">
+                  Landscapes
+                </button>
+                <button class="chip" type="button" data-filter-sub="florals">
+                  Florals
+                </button>
+                <button class="chip" type="button" data-filter-sub="animals">
+                  Animals
+                </button>
               </div>
             </div>
             <div class="toolbar-right available-summary">
@@ -101,6 +133,46 @@
           </div>
 
           <div class="gallery-grid" data-gallery-grid></div>
+
+          <div class="admin-panel" data-admin-panel hidden>
+            <div class="admin-panel-copy">
+              <strong>Admin controls</strong>
+              <p class="muted-small" data-admin-status>
+                Sign in here to manage Sold / Available status on this page.
+              </p>
+            </div>
+
+            <div data-admin-signed-out>
+              <form class="admin-form" data-admin-form>
+                <input
+                  type="email"
+                  placeholder="Admin email"
+                  autocomplete="username"
+                  data-admin-email
+                  required
+                />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  autocomplete="current-password"
+                  data-admin-password
+                  required
+                />
+                <button class="small-btn" type="submit" data-admin-submit>
+                  Sign in
+                </button>
+              </form>
+            </div>
+
+            <div class="admin-session" data-admin-signed-in hidden>
+              <span class="muted-small"
+                >Signed in as <strong data-admin-user-email></strong
+              ></span>
+              <button class="small-btn" type="button" data-admin-signout>
+                Sign out
+              </button>
+            </div>
+          </div>
 
           <noscript>
             <div class="gallery-empty">
@@ -251,6 +323,10 @@
       </div>
     </footer>
 
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
     <script src="data/available-works.js"></script>
     <script src="js/script.js"></script>
   </body>

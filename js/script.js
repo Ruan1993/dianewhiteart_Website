@@ -1,4 +1,17 @@
-const soldKey = 'dianeWhiteArtSoldState';
+const firebaseState = {
+  initAttempted: false,
+  enabled: false,
+  app: null,
+  auth: null,
+  db: null,
+  user: null,
+  isAdmin: false,
+  statuses: {},
+  unsubscribeStatuses: null,
+  authObserverAttached: false,
+  panelBound: false,
+  renderGallery: null,
+};
 
 function setActiveNav() {
   const page = document.body.dataset.page;
@@ -48,49 +61,253 @@ function initHeroSlider() {
   setInterval(() => activate((index + 1) % slides.length), 7000);
 }
 
-function getSoldState() {
+function normalizeStatus(value) {
+  return String(value || 'available').trim().toLowerCase() === 'sold' ? 'sold' : 'available';
+}
+
+function normalizeInventoryLabel(label) {
+  return String(label || '').trim().replace(/\s+/g, '').toUpperCase();
+}
+
+function formatStatusLabel(value) {
+  return normalizeStatus(value) === 'sold' ? 'Sold' : 'Available';
+}
+
+function getLiveStatusForWork(work) {
+  const key = normalizeInventoryLabel(work?.inventoryLabel || work?.number || work?.id);
+  if (key && firebaseState.statuses[key]) {
+    return formatStatusLabel(firebaseState.statuses[key]);
+  }
+  return formatStatusLabel(work?.status || 'Available');
+}
+
+function mergeWorkWithLiveStatus(work) {
+  return {
+    ...work,
+    status: getLiveStatusForWork(work),
+  };
+}
+
+function initFirebaseServices() {
+  if (firebaseState.initAttempted) return firebaseState.enabled;
+  firebaseState.initAttempted = true;
+
+  if (!window.firebase || !window.DWA_FIREBASE_CONFIG) {
+    return false;
+  }
+
   try {
-    return JSON.parse(localStorage.getItem(soldKey) || '{}');
-  } catch {
-    return {};
+    firebaseState.app = window.firebase.apps && window.firebase.apps.length
+      ? window.firebase.app()
+      : window.firebase.initializeApp(window.DWA_FIREBASE_CONFIG);
+    firebaseState.auth = window.firebase.auth();
+    firebaseState.db = window.firebase.firestore();
+    firebaseState.enabled = true;
+  } catch (error) {
+    console.error('Firebase initialisation failed.', error);
+    firebaseState.enabled = false;
+  }
+
+  return firebaseState.enabled;
+}
+
+function updateAdminPanelUI(message = '') {
+  const panel = document.querySelector('[data-admin-panel]');
+  if (!panel) return;
+
+  const status = panel.querySelector('[data-admin-status]');
+  const signedOut = panel.querySelector('[data-admin-signed-out]');
+  const signedIn = panel.querySelector('[data-admin-signed-in]');
+  const emailLabel = panel.querySelector('[data-admin-user-email]');
+  const formButton = panel.querySelector('[data-admin-submit]');
+
+  if (!firebaseState.enabled) {
+    panel.hidden = false;
+    if (status) status.textContent = 'Firebase is not configured on this page yet.';
+    if (signedOut) signedOut.hidden = true;
+    if (signedIn) signedIn.hidden = true;
+    return;
+  }
+
+  panel.hidden = false;
+  if (!firebaseState.user) {
+    if (status) status.textContent = message || 'Sign in here to manage Sold / Available status on this page.';
+    if (signedOut) signedOut.hidden = false;
+    if (signedIn) signedIn.hidden = true;
+    if (formButton) formButton.disabled = false;
+    return;
+  }
+
+  if (signedOut) signedOut.hidden = true;
+  if (signedIn) signedIn.hidden = false;
+  if (emailLabel) emailLabel.textContent = firebaseState.user.email || 'Admin';
+  if (status) {
+    status.textContent = message || (
+      firebaseState.isAdmin
+        ? 'Admin mode is active. Use the gallery buttons to mark works Sold or Available.'
+        : 'You are signed in, but this account does not have admin access.'
+    );
   }
 }
 
-function saveSoldState(state) {
-  localStorage.setItem(soldKey, JSON.stringify(state));
-}
+function subscribeToArtworkStatuses() {
+  if (!firebaseState.enabled || firebaseState.unsubscribeStatuses) return;
 
-function applySoldState() {
-  const state = getSoldState();
-  document.querySelectorAll('[data-art-id]').forEach((card) => {
-    const id = card.dataset.artId;
-    const sold = Boolean(state[id]);
-    const badge = card.querySelector('.badge');
-    const statusText = card.querySelector('[data-status-text]');
-    const toggle = card.querySelector('[data-toggle-sold]');
-    if (badge) {
-      badge.textContent = sold ? 'Sold' : 'Available';
-      badge.classList.toggle('sold', sold);
+  firebaseState.unsubscribeStatuses = firebaseState.db.collection('artworkStatus').onSnapshot((snapshot) => {
+    const nextStatuses = {};
+    snapshot.forEach((doc) => {
+      const data = doc.data() || {};
+      const key = normalizeInventoryLabel(data.inventoryLabel || doc.id);
+      if (!key) return;
+      nextStatuses[key] = normalizeStatus(data.status);
+    });
+    firebaseState.statuses = nextStatuses;
+    if (typeof firebaseState.renderGallery === 'function') {
+      firebaseState.renderGallery();
     }
-    if (statusText) statusText.textContent = sold ? 'Status: Sold' : 'Status: Available';
-    if (toggle) toggle.textContent = sold ? 'Mark Available' : 'Mark Sold';
-    card.classList.toggle('is-sold', sold);
+  }, (error) => {
+    console.error('Artwork status sync failed.', error);
+    updateAdminPanelUI('Live status could not be loaded. Check Firestore rules and try again.');
   });
 }
 
-function initSoldToggles() {
-  const state = getSoldState();
-  document.querySelectorAll('[data-toggle-sold]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const card = button.closest('[data-art-id]');
-      if (!card) return;
-      const id = card.dataset.artId;
-      state[id] = !state[id];
-      saveSoldState(state);
-      applySoldState();
+function initAdminPanel() {
+  const panel = document.querySelector('[data-admin-panel]');
+  if (!panel) return;
+
+  initFirebaseServices();
+  updateAdminPanelUI();
+
+  if (!firebaseState.enabled || firebaseState.panelBound) return;
+
+  firebaseState.panelBound = true;
+  const form = panel.querySelector('[data-admin-form]');
+  const signOutButton = panel.querySelector('[data-admin-signout]');
+
+  if (form) {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const email = form.querySelector('[data-admin-email]')?.value?.trim();
+      const password = form.querySelector('[data-admin-password]')?.value || '';
+      const submitButton = form.querySelector('[data-admin-submit]');
+
+      if (!email || !password) {
+        updateAdminPanelUI('Enter your email and password to sign in.');
+        return;
+      }
+
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Signing in...';
+      }
+
+      try {
+        await firebaseState.auth.signInWithEmailAndPassword(email, password);
+        form.reset();
+      } catch (error) {
+        console.error('Admin sign-in failed.', error);
+        updateAdminPanelUI('Sign-in failed. Double-check the email and password, then try again.');
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = 'Sign in';
+        }
+      }
+    });
+  }
+
+  if (signOutButton) {
+    signOutButton.addEventListener('click', async () => {
+      try {
+        await firebaseState.auth.signOut();
+      } catch (error) {
+        console.error('Admin sign-out failed.', error);
+        updateAdminPanelUI('Could not sign out right now. Please try again.');
+      }
+    });
+  }
+
+  if (!firebaseState.authObserverAttached) {
+    firebaseState.authObserverAttached = true;
+    firebaseState.auth.onAuthStateChanged(async (user) => {
+      firebaseState.user = user || null;
+      firebaseState.isAdmin = false;
+
+      if (user) {
+        try {
+          const tokenResult = await user.getIdTokenResult();
+          firebaseState.isAdmin = Boolean(tokenResult?.claims?.admin);
+        } catch (error) {
+          console.error('Could not read admin claim.', error);
+        }
+      }
+
+      updateAdminPanelUI();
+      if (typeof firebaseState.renderGallery === 'function') {
+        firebaseState.renderGallery();
+      }
+    });
+  }
+
+  subscribeToArtworkStatuses();
+}
+
+async function saveArtworkStatus(inventoryLabel, nextStatus) {
+  if (!firebaseState.enabled || !firebaseState.isAdmin) {
+    throw new Error('Admin access required.');
+  }
+
+  const normalizedLabel = normalizeInventoryLabel(inventoryLabel);
+  if (!normalizedLabel) {
+    throw new Error('Missing artwork label.');
+  }
+
+  const normalizedStatus = normalizeStatus(nextStatus);
+
+  await firebaseState.db.collection('artworkStatus').doc(normalizedLabel).set({
+    inventoryLabel: normalizedLabel,
+    status: normalizedStatus,
+    updatedBy: firebaseState.user?.email || 'admin',
+    updatedAt: window.firebase.firestore.FieldValue.serverTimestamp(),
+  }, { merge: true });
+
+  firebaseState.statuses = {
+    ...firebaseState.statuses,
+    [normalizedLabel]: normalizedStatus,
+  };
+
+  if (typeof firebaseState.renderGallery === 'function') {
+    firebaseState.renderGallery();
+  }
+}
+
+function initStatusToggles() {
+  document.querySelectorAll('[data-toggle-status]').forEach((button) => {
+    if (button.dataset.bound === 'true') return;
+    button.dataset.bound = 'true';
+
+    button.addEventListener('click', async () => {
+      if (!firebaseState.isAdmin) return;
+
+      const inventoryLabel = button.dataset.inventoryLabel;
+      const nextStatus = button.dataset.nextStatus || 'sold';
+      const originalText = button.textContent;
+
+      button.disabled = true;
+      button.textContent = 'Saving...';
+
+      try {
+        const normalizedLabel = normalizeInventoryLabel(inventoryLabel);
+        await saveArtworkStatus(normalizedLabel, nextStatus);
+        updateAdminPanelUI(`${inventoryLabel} updated to ${formatStatusLabel(nextStatus)}.`);
+      } catch (error) {
+        console.error('Artwork status update failed.', error);
+        updateAdminPanelUI(`Could not update ${inventoryLabel}. Please try again.`);
+        button.disabled = false;
+        button.textContent = originalText;
+      }
     });
   });
-  applySoldState();
 }
 
 function escapeHtml(value) {
@@ -112,9 +329,13 @@ function createArtworkCard(work) {
   const sizeLine = work.size || 'Available on request';
   const priceLine = work.price || 'Price on enquiry';
   const enquiryTitle = encodeURIComponent(work.title || 'Artwork enquiry');
+  const currentStatus = formatStatusLabel(work.status || 'Available');
+  const isSold = normalizeStatus(currentStatus) === 'sold';
+  const nextStatus = isSold ? 'available' : 'sold';
+  const inventoryLabel = work.inventoryLabel || work.number || work.id || 'Artwork';
 
   return `
-    <article class="art-card" data-art-id="${escapeHtml(work.id)}" data-category="${escapeHtml(work.mainFilter)}" data-subcategory="${escapeHtml(work.subFilter || '')}">
+    <article class="art-card ${isSold ? 'is-sold' : ''}" data-art-id="${escapeHtml(work.id)}" data-inventory-label="${escapeHtml(inventoryLabel)}" data-category="${escapeHtml(work.mainFilter)}" data-subcategory="${escapeHtml(work.subFilter || '')}">
       <div class="art-image">
         <img
           src="${escapeHtml(work.image)}"
@@ -123,20 +344,21 @@ function createArtworkCard(work) {
           loading="lazy"
           decoding="async"
         />
-        <span class="badge">${escapeHtml(work.status || 'Available')}</span>
+        <span class="badge ${isSold ? 'sold' : ''}">${escapeHtml(currentStatus)}</span>
       </div>
       <div class="art-body">
         <h3>${escapeHtml(work.title || 'Untitled')}</h3>
         <div class="meta">
+          <div>Ref: ${escapeHtml(inventoryLabel)}</div>
           <div>Medium: ${escapeHtml(mediumLine)}</div>
           <div>Category: ${escapeHtml(work.subcategory || 'Original works')}</div>
           <div>Size: ${escapeHtml(sizeLine)}</div>
           <div>Price: ${escapeHtml(priceLine)}</div>
-          <div data-status-text>Status: ${escapeHtml(work.status || 'Available')}</div>
+          <div data-status-text>Status: ${escapeHtml(currentStatus)}</div>
         </div>
         <div class="card-actions">
-          <a class="small-btn accent" href="contact.html?artwork=${enquiryTitle}">Enquire</a>
-          <button class="small-btn" type="button" data-toggle-sold>Mark Sold</button>
+          ${!isSold ? `<a class="small-btn accent" href="contact.html?artwork=${enquiryTitle}">Enquire</a>` : ''}
+          ${firebaseState.isAdmin ? `<button class="small-btn" type="button" data-toggle-status data-inventory-label="${escapeHtml(inventoryLabel)}" data-next-status="${escapeHtml(nextStatus)}">${isSold ? 'Mark Available' : 'Mark Sold'}</button>` : ''}
         </div>
       </div>
     </article>
@@ -209,7 +431,8 @@ async function initAvailableWorksPage() {
   updateFilterAvailability(payload, works, mainButtons, subButtons);
 
   const getVisibleWorks = () => {
-    let filtered = works;
+    const liveWorks = works.map(mergeWorkWithLiveStatus);
+    let filtered = liveWorks;
     if (activeMain !== 'all') {
       filtered = filtered.filter((work) => work.mainFilter === activeMain);
     }
@@ -232,6 +455,7 @@ async function initAvailableWorksPage() {
           : 'No works have been added yet.';
       }
     }
+
     if (countLabel) {
       const suffix = visibleWorks.length === 1 ? 'work' : 'works';
       countLabel.textContent = `${visibleWorks.length} ${suffix} shown`;
@@ -242,9 +466,12 @@ async function initAvailableWorksPage() {
       subFilterWrap.hidden = !(activeMain === 'acrylic' && acrylicAvailable);
     }
 
-    initSoldToggles();
+    initStatusToggles();
     initLightbox();
   };
+
+  firebaseState.renderGallery = renderGallery;
+  initAdminPanel();
 
   mainButtons.forEach((button) => {
     button.addEventListener('click', () => {
@@ -339,7 +566,9 @@ function initLightbox() {
 
   closeBtn.addEventListener('click', closeLightbox);
   lightbox.addEventListener('click', (e) => {
-    if (e.target === lightbox) closeLightbox();
+    if (!e.target.closest('.lightbox-inner') || e.target.classList.contains('lightbox-inner')) {
+      closeLightbox();
+    }
   });
 
   window.addEventListener('resize', () => {

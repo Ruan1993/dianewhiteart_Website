@@ -1,0 +1,9 @@
+# Local development only
+firebase-setup/serviceAccountKey.json
+firebase-setup/node_modules/
+firebase-setup/.env
+firebase-setup/package-lock.json
+js/firebase-config.js
+node_modules/
+.DS_Store
+Thumbs.db
