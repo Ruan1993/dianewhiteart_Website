@@ -1,6 +1,6 @@
 window.DIANE_AVAILABLE_WORKS = {
   "generatedFrom": "images/available",
-  "workCount": 34,
+  "workCount": 33,
   "works": [
     {
       "id": "art-bacc0f1af3",
@@ -313,22 +313,6 @@ window.DIANE_AVAILABLE_WORKS = {
       "title": "No 11 · Table Mountain",
       "image": "images/available/Acrylics/Landscape/No 11 Table Mountain Acrylic on boxed canvas 1000mm x 600mm price R7500.png",
       "full": "images/available/Acrylics/Landscape/No 11 Table Mountain Acrylic on boxed canvas 1000mm x 600mm price R7500.png",
-      "medium": "Acrylics",
-      "mediumDetails": "Acrylic on boxed canvas",
-      "subcategory": "Landscapes",
-      "size": "1000mm × 600mm",
-      "price": "R7500",
-      "status": "Available",
-      "mainFilter": "acrylic",
-      "subFilter": "landscapes"
-    },
-    {
-      "id": "art-48ddeb53fd",
-      "number": "11",
-      "inventoryLabel": "No 11",
-      "title": "No 11 · Table Mountain",
-      "image": "images/available/Acrylics/Landscape/No11 Table Mountain Acrylic on boxed canvas 1000mm x 600mm price R7500.png",
-      "full": "images/available/Acrylics/Landscape/No11 Table Mountain Acrylic on boxed canvas 1000mm x 600mm price R7500.png",
       "medium": "Acrylics",
       "mediumDetails": "Acrylic on boxed canvas",
       "subcategory": "Landscapes",
