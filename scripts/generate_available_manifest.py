@@ -58,12 +58,22 @@ def humanize_folder(name: str) -> str:
 def normalize_text(text: str) -> str:
     text = Path(text).stem.replace('_', ' ')
     text = text.replace('·', ' ')
+    
+    # User requested spelling and formatting fixes
+    text = text.replace('Lmpact', 'Impact').replace('Fow Art', 'Flow Art')
+    text = text.replace('predect', 'predict')
+    text = text.replace("Colour's", "Colours")
+    
+    # Fix "Various Blocks 200 x 200" to "Various Blocks (200mm x 200mm)"
+    text = re.sub(r'Various Blocks\s*(\d{3})\s*[xX]\s*(\d{3})(mm)?', r'Various Blocks (\1mm x \2mm)', text, flags=re.IGNORECASE)
+    
     text = re.sub(r'\s+', ' ', text).strip(' .-_')
     return text
 
 
 def extract_size(text: str) -> str:
     normalized = text.replace('l000', '1000').replace('x750', 'x 750')
+    # If size is already in the title (like Various Blocks), don't duplicate it in size field if preferred
     match = re.search(r'(\d{3,4})\s*mm\s*x\s*(\d{3,4})\s*mm', normalized, re.IGNORECASE)
     if not match:
         return ''
