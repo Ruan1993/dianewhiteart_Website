@@ -509,8 +509,10 @@ main section {
 }
 
 .mobile-only { display: none; }
-@media (max-width: 760px) {
+@media (max-width: 860px) {
   .mobile-only { display: block; }
+}
+@media (max-width: 760px) {
   .available-summary {
     flex-direction: column;
     align-items: flex-start !important;
