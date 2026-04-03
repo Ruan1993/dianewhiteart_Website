@@ -2547,78 +2547,61 @@ body {
 }
 
 .upcoming-events-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1.7fr) auto;
-  gap: 28px;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  padding: 34px 36px;
-  background: linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(122,31,43,0.08) 100%);
-  border: 1px solid rgba(122,31,43,0.12);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+  gap: 20px;
+  padding: 24px 32px;
+  background: white;
+  border: 1px solid #e0d8d9;
+  border-radius: 999px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+  transition: transform 0.2s ease;
 }
 
 .upcoming-events-card:hover {
-  transform: translateY(-3px);
-  border-color: rgba(122,31,43,0.24);
-  box-shadow: 0 24px 45px rgba(39,24,27,0.12);
+  transform: translateY(-2px);
 }
 
 .upcoming-events-copy h2 {
-  margin: 10px 0 0;
-  font-size: clamp(2rem, 3.5vw, 2.8rem);
-  font-weight: 700;
-  line-height: 1.1;
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 1.4rem;
+  font-weight: 500;
+  color: #1a1a1a;
+  letter-spacing: -0.01em;
+}
+
+.upcoming-events-action .btn.upcoming-events-btn {
+  min-width: auto;
+  padding: 10px 24px;
+  background: transparent;
   color: var(--accent);
-}
-
-.upcoming-events-copy p:last-child {
-  margin: 14px 0 0;
-  max-width: 58ch;
-  color: var(--muted);
-  line-height: 1.8;
-}
-
-.upcoming-events-action {
-  display: grid;
-  gap: 14px;
-  justify-items: end;
-}
-
-.event-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 42px;
-  padding: 10px 16px;
+  border: 1px solid rgba(122,31,43,0.3);
   border-radius: 999px;
-  background: rgba(255,255,255,0.86);
-  border: 1px solid rgba(122,31,43,0.14);
-  color: var(--accent);
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
 }
 
-.upcoming-events-action .btn {
-  min-width: 210px;
-  justify-content: center;
+.upcoming-events-action .btn.upcoming-events-btn:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  transform: none;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 760px) {
   .upcoming-events-card {
-    grid-template-columns: minmax(0, 1fr);
-    padding: 28px 24px;
+    flex-direction: column;
+    border-radius: 24px;
+    padding: 24px;
+    text-align: center;
   }
-
   .upcoming-events-copy h2 {
-    max-width: none;
+    font-size: 1.25rem;
   }
-
-  .upcoming-events-action {
-    justify-items: start;
+  .upcoming-events-action, .upcoming-events-btn {
+    width: 100%;
   }
 }
 
