@@ -5,6 +5,8 @@ import re
 from pathlib import Path
 from hashlib import md5
 
+from PIL import Image
+
 ROOT = Path(__file__).resolve().parents[1]
 AVAILABLE_DIR = ROOT / 'images' / 'available'
 OUTPUT = ROOT / 'data' / 'available-works.json'
@@ -12,12 +14,16 @@ JS_OUTPUT = ROOT / 'data' / 'available-works.js'
 
 IMAGE_EXTS = {'.png', '.jpg', '.jpeg', '.webp', '.gif'}
 TITLE_STOP_WORDS = (
-    ' acrylic', ' inks', ' ink', ' watercolour', ' watercolours', ' on ', ' price ', ' r'
+    ' acrylic', ' inks', ' ink', ' watercolour', ' watercolours', ' on ', ' price ', ' r', ' can be done'
 )
 
 
 def extract_inventory_prefix(text: str) -> tuple[str, str, str]:
     original = normalize_text(text)
+    # Special fix for Screenshot 2: Various Blocks 200 x 200mm
+    # Move the size into brackets if it's right after "Various Blocks"
+    original = re.sub(r'(Various Blocks)\s*(\d{3,4}\s*x\s*\d{3,4}mm)', r'\1 (\2)', original, flags=re.IGNORECASE)
+    
     patterns = (
         re.compile(r'^(No)\s*([0-9]+)\s*(.*)$', re.IGNORECASE),
         re.compile(r'^([A-Za-z])\s*([0-9]+)\s*(.*)$', re.IGNORECASE),
@@ -117,7 +123,15 @@ def extract_title(text: str) -> tuple[str, str, str]:
     return prefix_label, number, display_title
 
 
-def build_item(path: Path) -> dict[str, str]:
+def get_image_dimensions(path: Path) -> tuple[int, int]:
+    try:
+        with Image.open(path) as image:
+            return image.size
+    except Exception:
+        return 0, 0
+
+
+def build_item(path: Path) -> dict[str, str | int]:
     rel = path.relative_to(ROOT).as_posix()
     medium_folder = path.parents[1].name
     subcategory_folder = path.parent.name
@@ -133,6 +147,7 @@ def build_item(path: Path) -> dict[str, str]:
     raw_text = normalize_text(path.name)
 
     art_id = 'art-' + md5(rel.encode('utf-8')).hexdigest()[:10]
+    image_width, image_height = get_image_dimensions(path)
     return {
         'id': art_id,
         'number': number,
@@ -140,6 +155,8 @@ def build_item(path: Path) -> dict[str, str]:
         'title': title,
         'image': rel,
         'full': rel,
+        'imageWidth': image_width,
+        'imageHeight': image_height,
         'medium': medium_label,
         'mediumDetails': extract_medium_details(raw_text, medium_label),
         'subcategory': subcategory_label,

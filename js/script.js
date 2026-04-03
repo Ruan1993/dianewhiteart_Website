@@ -344,9 +344,28 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function splitArtworkTitle(work) {
+  const inventoryLabel = String(work.inventoryLabel || work.number || '').trim();
+  const rawTitle = String(work.title || 'Untitled').trim();
+  const pattern = /^([A-Za-z]\d+|No\s*\d+)\s*[·\-–:]\s*(.+)$/i;
+  const match = rawTitle.match(pattern);
+
+  if (match) {
+    return {
+      displayRef: match[1].trim().toUpperCase(),
+      displayTitle: match[2].trim() || 'Untitled'
+    };
+  }
+
+  return {
+    displayRef: inventoryLabel,
+    displayTitle: rawTitle || 'Untitled'
+  };
+}
+
 function getArtworkAlt(work) {
-  const title = (work.title || 'Artwork').replace(/^(?:No\s*\d+|[A-Za-z]\d+)\s*·\s*/i, '').trim();
-  return `${title} painting by Diane White`;
+  const { displayTitle } = splitArtworkTitle(work);
+  return `${displayTitle} painting by Diane White`;
 }
 
 function createArtworkCard(work) {
@@ -358,6 +377,7 @@ function createArtworkCard(work) {
   const isSold = normalizeStatus(currentStatus) === 'sold';
   const nextStatus = isSold ? 'available' : 'sold';
   const inventoryLabel = work.inventoryLabel || work.number || work.id || 'Artwork';
+  const { displayRef, displayTitle } = splitArtworkTitle(work);
 
   let adminLog = '';
   if (firebaseState.isAdmin && work.updatedBy) {
@@ -366,27 +386,32 @@ function createArtworkCard(work) {
     adminLog = `<div class="admin-log">Last updated by ${work.updatedBy} ${dateStr}</div>`;
   }
 
+  const widthAttr = Number(work.imageWidth) > 0 ? ` width="${Number(work.imageWidth)}"` : '';
+  const heightAttr = Number(work.imageHeight) > 0 ? ` height="${Number(work.imageHeight)}"` : '';
+
   return `
     <article class="art-card ${isSold ? 'is-sold' : ''}" data-art-id="${escapeHtml(work.id)}" data-inventory-label="${escapeHtml(inventoryLabel)}" data-category="${escapeHtml(work.mainFilter)}" data-subcategory="${escapeHtml(work.subFilter || '')}">
       <div class="art-image">
         <img
           src="${escapeHtml(work.image)}"
           data-full="${escapeHtml(work.full || work.image)}"
-          alt="${escapeHtml(getArtworkAlt(work))}"
+          alt="${escapeHtml(getArtworkAlt(work))}"${widthAttr}${heightAttr}
           loading="lazy"
           decoding="async"
         />
         <span class="badge ${isSold ? 'sold' : ''}">${escapeHtml(currentStatus)}</span>
       </div>
       <div class="art-body">
-        <h3>${escapeHtml(work.title || 'Untitled')}</h3>
+        <div class="art-title-block">
+          ${displayRef ? `<span class="art-ref">${escapeHtml(displayRef)}</span>` : ''}
+          <h3>${escapeHtml(displayTitle)}</h3>
+        </div>
         <div class="meta">
-          <div>Ref: ${escapeHtml(inventoryLabel)}</div>
-          <div>Medium: ${escapeHtml(mediumLine)}</div>
-          <div>Category: ${escapeHtml(work.subcategory || 'Original works')}</div>
-          <div>Size: ${escapeHtml(sizeLine)}</div>
-          <div>Price: ${escapeHtml(priceLine)}</div>
-          <div data-status-text>Status: ${escapeHtml(currentStatus)}</div>
+          <div><strong>Medium:</strong> ${escapeHtml(mediumLine)}</div>
+          <div><strong>Category:</strong> ${escapeHtml(work.subcategory || 'Original works')}</div>
+          <div><strong>Size:</strong> ${escapeHtml(sizeLine)}</div>
+          <div><strong>Price:</strong> ${escapeHtml(priceLine)}</div>
+          <div data-status-text><strong>Status:</strong> ${escapeHtml(currentStatus)}</div>
           ${adminLog}
         </div>
         <div class="card-actions">
