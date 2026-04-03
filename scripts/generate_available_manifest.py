@@ -63,6 +63,7 @@ def normalize_text(text: str) -> str:
     text = text.replace('Lmpact', 'Impact').replace('Fow Art', 'Flow Art')
     text = text.replace('predect', 'predict')
     text = text.replace("Colour's", "Colours")
+    text = text.replace('lris', 'Iris').replace('Irris', 'Iris').replace('Lris', 'Iris')
     
     # Fix "Various Blocks 200 x 200" to "Various Blocks (200mm x 200mm)"
     text = re.sub(r'Various Blocks\s*(\d{3})\s*[xX]\s*(\d{3})(mm)?', r'Various Blocks (\1mm x \2mm)', text, flags=re.IGNORECASE)
