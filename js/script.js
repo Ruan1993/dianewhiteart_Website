@@ -552,7 +552,7 @@ async function initAvailableWorksPage() {
       const nextMain = button.dataset.filterMain;
       if (!nextMain || button.disabled) return;
       activeMain = nextMain;
-      activeSub = 'all';
+      activeSub = nextMain === 'acrylic' ? 'landscapes' : 'all';
       setButtonState(mainButtons, activeMain);
       setButtonState(subButtons, activeSub);
       renderGallery();

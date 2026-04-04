@@ -70,7 +70,7 @@ window.DIANE_AVAILABLE_WORKS = {
       "subcategory": "Animals",
       "size": "400mm × 600mm",
       "price": "R2500",
-      "status": "Sold",
+      "status": "Available",
       "mainFilter": "acrylic",
       "subFilter": "animals"
     },
@@ -1073,7 +1073,7 @@ window.DIANE_AVAILABLE_WORKS = {
       "full": "images/available/Acrylics & Oil paintings/Landscape/No 28 Breaking waves 2  Oil on canvas framed 900mm x500mm price R8500.png",
       "imageWidth": 1600,
       "imageHeight": 851,
-      "medium": "Oil",
+      "medium": "Oil framed",
       "mediumDetails": "Oil on canvas framed",
       "subcategory": "Landscapes",
       "size": "900mm × 500mm",

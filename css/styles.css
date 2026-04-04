@@ -576,12 +576,13 @@ main section {
   letter-spacing: 0.07em;
 }
 .badge.sold {
-  background: var(--accent);
+  background: #5a141d;
   color: #fff;
-  padding: 12px 20px;
-  font-size: 1rem;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  border: 2px solid rgba(255,255,255,0.3);
+  padding: 14px 24px;
+  font-size: 1.1rem;
+  font-weight: 900;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+  border: 2px solid rgba(255,255,255,0.4);
 }
 .art-body { padding: 22px; display: grid; gap: 12px; }
 .art-title-block {
