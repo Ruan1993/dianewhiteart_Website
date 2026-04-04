@@ -1284,12 +1284,8 @@ window.DIANE_AVAILABLE_WORKS = {
   "filters": {
     "main": [
       {
-        "key": "landscapes",
-        "label": "Landscapes"
-      },
-      {
-        "key": "florals",
-        "label": "Florals"
+        "key": "acrylic",
+        "label": "Acrylics & Oils"
       },
       {
         "key": "watercolour",
@@ -1315,15 +1311,14 @@ window.DIANE_AVAILABLE_WORKS = {
       }
     ],
     "availableMainFilters": [
-      "landscapes",
-      "florals",
+      "acrylic",
       "watercolour",
       "inks"
     ],
     "availableSubFilters": [
-      "animals",
+      "landscapes",
       "florals",
-      "landscapes"
+      "animals"
     ]
   }
 };

@@ -424,14 +424,12 @@ function createArtworkCard(work) {
 }
 
 function updateFilterAvailability(payload, works, mainButtons, subButtons) {
-  const landscapesCount = works.filter(w => w.mainFilter === 'acrylic' && w.subFilter === 'landscapes').length;
-  const floralsCount = works.filter(w => w.mainFilter === 'acrylic' && w.subFilter === 'florals').length;
+  const acrylicCount = works.filter(w => w.mainFilter === 'acrylic').length;
   const watercolourCount = works.filter(w => w.mainFilter === 'watercolour').length;
   const inksCount = works.filter(w => w.mainFilter === 'inks').length;
 
   const counts = {
-    landscapes: landscapesCount,
-    florals: floralsCount,
+    acrylic: acrylicCount,
     watercolour: watercolourCount,
     inks: inksCount
   };
@@ -444,9 +442,18 @@ function updateFilterAvailability(payload, works, mainButtons, subButtons) {
     button.classList.toggle('is-disabled', !hasWorks);
   });
 
+  const subCounts = {
+    landscapes: works.filter(w => w.mainFilter === 'acrylic' && w.subFilter === 'landscapes').length,
+    florals: works.filter(w => w.mainFilter === 'acrylic' && w.subFilter === 'florals').length,
+    animals: works.filter(w => w.mainFilter === 'acrylic' && w.subFilter === 'animals').length
+  };
+
   subButtons.forEach((button) => {
-    button.disabled = true;
-    button.classList.add('is-disabled');
+    const key = button.dataset.filterSub;
+    if (!key) return;
+    const hasWorks = Boolean(subCounts[key]);
+    button.disabled = !hasWorks;
+    button.classList.toggle('is-disabled', !hasWorks);
   });
 }
 
@@ -478,8 +485,8 @@ async function initAvailableWorksPage() {
   }
 
   const works = Array.isArray(payload.works) ? payload.works : [];
-  let activeMain = 'landscapes';
-  let activeSub = 'all';
+  let activeMain = 'acrylic';
+  let activeSub = 'landscapes';
 
   updateFilterAvailability(payload, works, mainButtons, subButtons);
 
@@ -500,15 +507,11 @@ async function initAvailableWorksPage() {
       filtered = filtered.filter(work => normalizeStatus(work.status) !== 'sold');
     }
 
-    if (activeMain === 'landscapes') {
-      filtered = filtered.filter((work) => work.mainFilter === 'acrylic' && work.subFilter === 'landscapes');
-    } else if (activeMain === 'florals') {
-      filtered = filtered.filter((work) => work.mainFilter === 'acrylic' && work.subFilter === 'florals');
-    } else if (activeMain !== 'all') {
+    if (activeMain !== 'all') {
       filtered = filtered.filter((work) => work.mainFilter === activeMain);
     }
     
-    if (activeMain === 'acrylic' && activeSub !== 'all') {
+    if (activeMain === 'acrylic') {
       filtered = filtered.filter((work) => work.subFilter === activeSub);
     }
     return filtered;
@@ -534,8 +537,7 @@ async function initAvailableWorksPage() {
     }
 
     if (subFilterWrap) {
-      const acrylicAvailable = works.some((work) => work.mainFilter === 'acrylic');
-      subFilterWrap.hidden = true; // Always hide subfilters as per new structure
+      subFilterWrap.hidden = activeMain !== 'acrylic';
     }
 
     initStatusToggles();
