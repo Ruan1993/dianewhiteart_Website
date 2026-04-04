@@ -424,34 +424,29 @@ function createArtworkCard(work) {
 }
 
 function updateFilterAvailability(payload, works, mainButtons, subButtons) {
-  const mainCounts = works.reduce((acc, work) => {
-    acc[work.mainFilter] = (acc[work.mainFilter] || 0) + 1;
-    return acc;
-  }, {});
+  const landscapesCount = works.filter(w => w.mainFilter === 'acrylic' && w.subFilter === 'landscapes').length;
+  const floralsCount = works.filter(w => w.mainFilter === 'acrylic' && w.subFilter === 'florals').length;
+  const watercolourCount = works.filter(w => w.mainFilter === 'watercolour').length;
+  const inksCount = works.filter(w => w.mainFilter === 'inks').length;
 
-  const acrylicWorks = works.filter((work) => work.mainFilter === 'acrylic');
-  const subCounts = acrylicWorks.reduce((acc, work) => {
-    acc[work.subFilter] = (acc[work.subFilter] || 0) + 1;
-    return acc;
-  }, {});
-
-  const configuredMain = new Set(payload?.filters?.availableMainFilters || []);
-  const configuredSub = new Set(payload?.filters?.availableSubFilters || []);
+  const counts = {
+    landscapes: landscapesCount,
+    florals: floralsCount,
+    watercolour: watercolourCount,
+    inks: inksCount
+  };
 
   mainButtons.forEach((button) => {
     const key = button.dataset.filterMain;
-    if (!key || key === 'all') return;
-    const hasFolder = configuredMain.size ? configuredMain.has(key) : Boolean(mainCounts[key]);
-    button.disabled = !hasFolder;
-    button.classList.toggle('is-disabled', !hasFolder);
+    if (!key) return;
+    const hasWorks = Boolean(counts[key]);
+    button.disabled = !hasWorks;
+    button.classList.toggle('is-disabled', !hasWorks);
   });
 
   subButtons.forEach((button) => {
-    const key = button.dataset.filterSub;
-    if (!key || key === 'all') return;
-    const hasFolder = configuredSub.size ? configuredSub.has(key) : Boolean(subCounts[key]);
-    button.disabled = !hasFolder;
-    button.classList.toggle('is-disabled', !hasFolder);
+    button.disabled = true;
+    button.classList.add('is-disabled');
   });
 }
 
@@ -483,7 +478,7 @@ async function initAvailableWorksPage() {
   }
 
   const works = Array.isArray(payload.works) ? payload.works : [];
-  let activeMain = 'all';
+  let activeMain = 'landscapes';
   let activeSub = 'all';
 
   updateFilterAvailability(payload, works, mainButtons, subButtons);
@@ -505,9 +500,14 @@ async function initAvailableWorksPage() {
       filtered = filtered.filter(work => normalizeStatus(work.status) !== 'sold');
     }
 
-    if (activeMain !== 'all') {
+    if (activeMain === 'landscapes') {
+      filtered = filtered.filter((work) => work.mainFilter === 'acrylic' && work.subFilter === 'landscapes');
+    } else if (activeMain === 'florals') {
+      filtered = filtered.filter((work) => work.mainFilter === 'acrylic' && work.subFilter === 'florals');
+    } else if (activeMain !== 'all') {
       filtered = filtered.filter((work) => work.mainFilter === activeMain);
     }
+    
     if (activeMain === 'acrylic' && activeSub !== 'all') {
       filtered = filtered.filter((work) => work.subFilter === activeSub);
     }
@@ -535,7 +535,7 @@ async function initAvailableWorksPage() {
 
     if (subFilterWrap) {
       const acrylicAvailable = works.some((work) => work.mainFilter === 'acrylic');
-      subFilterWrap.hidden = !(activeMain === 'acrylic' && acrylicAvailable);
+      subFilterWrap.hidden = true; // Always hide subfilters as per new structure
     }
 
     initStatusToggles();
