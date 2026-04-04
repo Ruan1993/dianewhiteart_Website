@@ -518,8 +518,19 @@ async function initAvailableWorksPage() {
   };
 
   const renderGallery = () => {
+    // Lock the grid height to prevent flicker/jump
+    const currentHeight = grid.offsetHeight;
+    if (currentHeight > 0) {
+      grid.style.minHeight = `${currentHeight}px`;
+    }
+
     const visibleWorks = getVisibleWorks();
     grid.innerHTML = visibleWorks.map(createArtworkCard).join('');
+
+    // Release min-height after content update
+    requestAnimationFrame(() => {
+      grid.style.minHeight = '';
+    });
 
     if (emptyState) {
       emptyState.hidden = visibleWorks.length > 0;

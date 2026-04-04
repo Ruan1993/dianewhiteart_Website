@@ -576,13 +576,15 @@ main section {
   letter-spacing: 0.07em;
 }
 .badge.sold {
-  background: #5a141d;
+  background: #4a1018; /* Deeper maroon */
   color: #fff;
-  padding: 14px 24px;
+  padding: 16px 28px; /* Slightly more padding */
   font-size: 1.1rem;
   font-weight: 900;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45); /* Stronger shadow */
   border: 2px solid rgba(255,255,255,0.4);
+  transform: rotate(-2deg); /* Subtle tilt */
+  display: inline-block; /* Ensure transform works correctly */
 }
 .art-body { padding: 22px; display: grid; gap: 12px; }
 .art-title-block {
