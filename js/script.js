@@ -14,6 +14,73 @@ const firebaseState = {
   renderGallery: null,
 };
 
+function trackAnalyticsEvent(eventName, parameters = {}) {
+  try {
+    if (typeof window.gtag === 'function') {
+      window.gtag('event', eventName, parameters);
+    }
+  } catch (error) {
+    // Analytics must never interrupt the visitor's action.
+  }
+}
+
+function getArtworkName(element) {
+  const card = element.closest('.art-card');
+  if (!card) return '';
+
+  const reference = card.querySelector('.art-ref')?.textContent?.trim();
+  const title = card.querySelector('h3')?.textContent?.trim();
+  return [reference, title].filter(Boolean).join(' · ');
+}
+
+function initAnalyticsInteractions() {
+  document.addEventListener('click', (event) => {
+    const link = event.target.closest('a[href]');
+    if (!link) return;
+
+    if (link.matches('[data-artwork-enquiry]')) {
+      const artworkName = link.dataset.artworkName?.trim();
+      trackAnalyticsEvent('artwork_enquiry_clicked', artworkName ? { artwork_name: artworkName } : {});
+      return;
+    }
+
+    const href = link.getAttribute('href') || '';
+    const normalizedHref = href.trim().toLowerCase();
+
+    if (normalizedHref.startsWith('tel:')) {
+      trackAnalyticsEvent('phone_clicked');
+      return;
+    }
+
+    if (normalizedHref.startsWith('mailto:')) {
+      trackAnalyticsEvent('email_clicked');
+      return;
+    }
+
+    let url;
+    try {
+      url = new URL(link.href, window.location.href);
+    } catch (error) {
+      return;
+    }
+
+    const hostname = url.hostname.toLowerCase().replace(/^www\./, '');
+    if (hostname === 'wa.me' || hostname === 'whatsapp.com' || hostname.endsWith('.whatsapp.com')) {
+      trackAnalyticsEvent('whatsapp_clicked');
+      return;
+    }
+
+    const socialPlatforms = [
+      { platform: 'facebook', matches: hostname === 'facebook.com' || hostname.endsWith('.facebook.com') },
+      { platform: 'instagram', matches: hostname === 'instagram.com' || hostname.endsWith('.instagram.com') },
+    ];
+    const social = socialPlatforms.find((item) => item.matches);
+    if (social) {
+      trackAnalyticsEvent('social_clicked', { platform: social.platform });
+    }
+  });
+}
+
 function setActiveNav() {
   const page = document.body.dataset.page;
   document.querySelectorAll('[data-nav]').forEach((link) => {
@@ -415,7 +482,7 @@ function createArtworkCard(work) {
           ${adminLog}
         </div>
         <div class="card-actions">
-          ${!isSold ? `<a class="small-btn accent" href="contact.html?artwork=${enquiryTitle}">Enquire</a>` : ''}
+          ${!isSold ? `<a class="small-btn accent" href="contact.html?artwork=${enquiryTitle}" data-artwork-enquiry data-artwork-name="${escapeHtml([displayRef, displayTitle].filter(Boolean).join(' · '))}">Enquire</a>` : ''}
           ${firebaseState.isAdmin ? `<button class="small-btn" type="button" data-toggle-status data-inventory-label="${escapeHtml(inventoryLabel)}" data-next-status="${escapeHtml(nextStatus)}">${isSold ? 'Mark Available' : 'Mark Sold'}</button>` : ''}
         </div>
       </div>
@@ -634,6 +701,11 @@ function initLightbox() {
       lightbox.classList.add('open', 'loading');
       lightboxImg.alt = img.alt || 'Artwork image';
 
+      if (document.body.dataset.page === 'available' || document.body.dataset.page === 'portfolio') {
+        const artworkName = getArtworkName(img);
+        trackAnalyticsEvent('artwork_viewed', artworkName ? { artwork_name: artworkName } : {});
+      }
+
       const preload = new Image();
       preload.onload = () => {
         lightboxImg.src = hiRes;
@@ -786,6 +858,10 @@ function initFormspreeForms() {
           throw new Error('Form submission failed');
         }
 
+        if (formType === 'contact') {
+          trackAnalyticsEvent('enquiry_submitted');
+        }
+
         form.reset();
 
         Array.from(form.children).forEach((child) => {
@@ -813,11 +889,12 @@ function initFormspreeForms() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  initAnalyticsInteractions();
   setActiveNav();
   initMenu();
   initHeroSlider();
   await initAvailableWorksPage();
-  initLightbox();
+  if (document.body.dataset.page !== 'available') initLightbox();
   initBackToTop();
   initDynamicYear();
   initContactPrefill();
