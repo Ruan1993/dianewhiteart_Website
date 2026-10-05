@@ -699,7 +699,7 @@ window.DIANE_AVAILABLE_WORKS = {
       "mediumDetails": "Acrylic on boxed canvas",
       "subcategory": "Landscapes",
       "size": "850mm × 600mm",
-      "price": "R5,000",
+      "price": "R8,000",
       "status": "Available",
       "mainFilter": "acrylic",
       "subFilter": "landscapes"
